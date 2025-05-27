@@ -626,7 +626,7 @@ app.put('/meu-perfil/config/senha/:ID_Usuario', async (req, res) => {
    // Area de pesquisa da hospedagem
    // ✅ Post - Pesquisar hospedagem
 
-   app.post('/escolha-hospedagem-petsitter/agendamento', (req, res) => {
+   app.post('/escolha-hospedagem-petsitter/servicos', (req, res) => {
     const {
       
       dataInicio,
@@ -640,7 +640,7 @@ app.put('/meu-perfil/config/senha/:ID_Usuario', async (req, res) => {
   
     con.query(`
       INSERT INTO agendamento 
-      ( Data_Inicio, Data_Fim, Servico, Estado, Cidade, TipoPet, Quantidade) 
+      ( Data_Inicio, Data_conclusao, Servico, Estado, Cidade, TipoPet, Quantidade) 
       VALUES (?, ?, ?, ?, ?, ?, ?)`, 
       [ dataInicio, dataFim, servico, estado, cidade, tipoPet, quantidade],
       (error, result) => {
@@ -670,19 +670,127 @@ app.get('/listar_hosp', (req, res) => {
 
 
 
+// ############################# Filtro ###############################################
+app.post("/reserva/filtro",(req,res)=>{
+  con.query(`	SELECT us.ID_Usuario, us.Tipo_usuario, us.Foto_usuario,
+	dp.Nome,dp.Sobrenome, en.Cidade,en.Estado, se.Tipo_servico, se.Preco_servico
+	FROM usuario us INNER JOIN dados_pessoais dp ON us.ID_Usuario = dp.ID_Usuario
+	INNER JOIN enderecos en ON us.ID_Usuario = en.ID_Usuario INNER JOIN agendamento ag ON 
+	us.ID_Usuario = ag.ID_Usuario INNER JOIN servicos se ON ag.ID_Servico = se.ID_Servico
+	WHERE us.Tipo_usuario = "Cuidador" OR us.Tipo_usuario = "Cuidador/Tutor" AND en.Cidade = ? 
+	AND en.Estado = ? AND se.Tipo_servico = ?`,[req.body.cidade,req.body.estado,req.body.tiposervico],(err,result)=>{
+    if(err){
+      return res.status(500).send({ msg: `Erro ao filtrar serviços: ${err}` });
+    }
+    res.status(200).send({msg:`Cuidadores encontrados`, payload: result});
+  })
+})
+
+
+
+
+
+
+
 // 📝 Cadastrar uma nova hospedagem (reserva) feita por um tutor específico
+// app.post('/reserva/cad-hosp/:id', (req, res) => {
+//   const Tutor = req.params.id; // ID do tutor (usuário logado)
+//   const Cuidador = req.body.ID_Usuario; // ID do cuidador que oferece o serviço
+
+//   const {
+//     Tipo_servico,
+//     Preco_servico,
+//     qtd_pets,
+//     Porte_pet,
+//     Situacao,
+//     ID_Usuario, // ID do cuidador
+
+//     // Dados para o agendamento
+//     data_inicio,
+//     data_conclusao,
+//     ID_Pet,
+//     ID_Endereco,
+//     Periodo_entrada,
+//     Periodo_saida,
+//     Instru_Pet,
+//     Itens_Pet
+//   } = req.body;
+
+//   // 1️⃣ Verificar se Cuidador existe e é do tipo certo
+//   const checkCuidadorSQL = `
+//     SELECT ID_Usuario FROM usuario 
+//     WHERE ID_Usuario = ? AND (Tipo_usuario = 'Cuidador' OR Tipo_usuario = 'Cuidador/Tutor')
+//   `;
+
+//   con.query(checkCuidadorSQL, [ID_Usuario], (errCheck, resultCheck) => {
+//     if (errCheck) {
+//       return res.status(500).send({ msg: "Erro ao validar cuidador", error: errCheck });
+//     }
+
+//     if (resultCheck.length === 0) {
+//       return res.status(400).send({ msg: "O ID informado não é um cuidador válido" });
+//     }})
+
+
+
+//   // 1️⃣ Inserir serviço
+//   const insertServicoSQL = `
+//     INSERT INTO servicos (Cuidador, Tipo_servico, Preco_servico, qtd_pets, Porte_pet, Situacao)
+//     VALUES (?, ?, ?, ?, ?, ?)
+//   `;
+
+//   const servicoValues = [Cuidador, Tipo_servico, Preco_servico, qtd_pets, Porte_pet, Situacao];
+
+//   con.query(insertServicoSQL, servicoValues, (errServico, resultServico) => {
+//     if (errServico) {
+//       return res.status(500).send({ msg: "Erro ao cadastrar serviço", error: errServico });
+//     }
+
+//     const ID_Servico = resultServico.insertId;
+
+//     // 2️⃣ Inserir agendamento com o ID_Servico recém criado
+//     const insertAgendamentoSQL = `
+//       INSERT INTO agendamento (
+//         ID_Servico, Cuidador, Tutor, ID_Recibo,
+//         data_inicio, data_conclusao,
+//         ID_Pet, ID_Endereco,
+//         Periodo_entrada, Periodo_saida,
+//         Instru_Pet, Itens_Pet
+//       ) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)
+//     `;
+
+//     const agendamentoValues = [
+//       ID_Servico, Cuidador, Tutor,
+//       data_inicio, data_conclusao,
+//       ID_Pet, ID_Endereco,
+//       Periodo_entrada, Periodo_saida,
+//       Instru_Pet, Itens_Pet
+//     ];
+
+//     con.query(insertAgendamentoSQL, agendamentoValues, (errAgendamento, resultAgendamento) => {
+//       if (errAgendamento) {
+//         return res.status(500).send({ msg: "Erro ao cadastrar agendamento", error: errAgendamento });
+//       }
+
+//       res.status(201).send({
+//         msg: "Serviço e agendamento cadastrados com sucesso!",
+//         ID_Servico,
+//         ID_Agendamento: resultAgendamento.insertId
+//       });
+//     });
+//   });
+// });
+
 app.post('/reserva/cad-hosp/:id', (req, res) => {
-  const Tutor = req.params.id; // ID do tutor (usuário logado)
+  const Tutor = req.params.id;
 
   const {
-    Cuidador,
+    ID_Usuario,
     Tipo_servico,
     Preco_servico,
     qtd_pets,
     Porte_pet,
     Situacao,
-
-    // Dados para o agendamento
     data_inicio,
     data_conclusao,
     ID_Pet,
@@ -693,53 +801,53 @@ app.post('/reserva/cad-hosp/:id', (req, res) => {
     Itens_Pet
   } = req.body;
 
-  // 1️⃣ Inserir serviço
-  const insertServicoSQL = `
-    INSERT INTO servicos (Cuidador, Tipo_servico, Preco_servico, qtd_pets, Porte_pet, Situacao)
+  // Inserir serviço
+  const insertServicoQuery = `
+    INSERT INTO servicos (ID_Usuario, Tipo_servico, Preco_servico, qtd_pets, Porte_pet, Situacao)
     VALUES (?, ?, ?, ?, ?, ?)
   `;
+  const servicoValues = [ID_Usuario, Tipo_servico, Preco_servico, qtd_pets, Porte_pet, Situacao];
 
-  const servicoValues = [Cuidador, Tipo_servico, Preco_servico, qtd_pets, Porte_pet, Situacao];
-
-  con.query(insertServicoSQL, servicoValues, (errServico, resultServico) => {
-    if (errServico) {
-      return res.status(500).send({ msg: "Erro ao cadastrar serviço", error: errServico });
+  con.query(insertServicoQuery, servicoValues, (err, servicoResult) => {
+    if (err) {
+      console.error("Erro ao inserir serviço:", err);
+      return res.status(500).send({ error: "Erro ao cadastrar o serviço", detalhes: err.message });
     }
 
-    const ID_Servico = resultServico.insertId;
+    const ID_Servico = servicoResult.insertId;
 
-    // 2️⃣ Inserir agendamento com o ID_Servico recém criado
-    const insertAgendamentoSQL = `
+    // Inserir agendamento
+    const insertAgendamentoQuery = `
       INSERT INTO agendamento (
-        ID_Servico, Cuidador, Tutor, ID_Recibo,
-        data_inicio, data_conclusao,
-        ID_Pet, ID_Endereco,
-        Periodo_entrada, Periodo_saida,
+        ID_Servico, ID_Usuario, data_inicio, data_conclusao,
+        ID_Pet, ID_Endereco, Periodo_entrada, Periodo_saida,
         Instru_Pet, Itens_Pet
-      ) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-
     const agendamentoValues = [
-      ID_Servico, Cuidador, Tutor,
+      ID_Servico, ID_Usuario,
       data_inicio, data_conclusao,
       ID_Pet, ID_Endereco,
       Periodo_entrada, Periodo_saida,
       Instru_Pet, Itens_Pet
     ];
 
-    con.query(insertAgendamentoSQL, agendamentoValues, (errAgendamento, resultAgendamento) => {
-      if (errAgendamento) {
-        return res.status(500).send({ msg: "Erro ao cadastrar agendamento", error: errAgendamento });
+    con.query(insertAgendamentoQuery, agendamentoValues, (err2) => {
+      if (err2) {
+        console.error("Erro ao inserir agendamento:", err2);
+        return res.status(500).send({ error: "Erro ao cadastrar o agendamento", detalhes: err2.message });
       }
 
       res.status(201).send({
-        msg: "Serviço e agendamento cadastrados com sucesso!",
-        ID_Servico,
-        ID_Agendamento: resultAgendamento.insertId
+        message: "Reserva e agendamento criados com sucesso!",
+        ID_Servico: ID_Servico
       });
     });
   });
 });
+
+
 
 
 
