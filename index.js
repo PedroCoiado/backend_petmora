@@ -268,7 +268,11 @@ app.put('/meu-perfil/alterar-dados-pessoais/:id', (req, res) => {
     Bairro,
     Cidade,
     Estado,
-    Tipo_usuario
+    Tipo_usuario,
+    Tipo_servico,
+    Tipo_porte,
+    Preco_servico,
+
   } = req.body;
 
   // 1. Atualiza dados pessoais
@@ -279,17 +283,27 @@ app.put('/meu-perfil/alterar-dados-pessoais/:id', (req, res) => {
   `;
 
   // Se o Tipo_usuario for diferente de null, atualiza também na tabela usuario
-  if (Tipo_usuario) {
+  if (Tipo_usuario == "Cuidador" || Tipo_usuario == "Cuidador/Tutor") {
     const queryTipoUsuario = `
       UPDATE usuario
       SET Tipo_usuario = ?
-      WHERE ID_Usuario = ?
+      WHERE ID_Usuario = ? 
     `;
     con.query(queryTipoUsuario, [Tipo_usuario, id], (erroTipo, resultadoTipo) => {
       if (erroTipo) {
         return res.status(500).send({ msg: `Erro ao atualizar tipo de usuário: ${erroTipo}` });
-      }
+      }    
     });
+    console.log(Tipo_servico, Preco_servico, Tipo_porte, id);
+      const queryServico = `
+        INSERT INTO servicos(Tipo_servico, Preco_servico, Porte_pet, ID_Usuario)values(?,?,?,?) `;
+        con.query(queryServico, [Tipo_servico, Preco_servico, Tipo_porte, id], (erroServico, resultadoServico) => {
+          if (erroServico) {
+            return res.status(500).send({ msg: `Erro ao atualizar serviço: ${erroServico}` });
+          }
+          console.log("Serviço atualizado com sucesso:", resultadoServico);
+        }
+      );
   }
   // Atualiza os dados pessoais
 
@@ -626,31 +640,56 @@ app.put('/meu-perfil/config/senha/:ID_Usuario', async (req, res) => {
    // Area de pesquisa da hospedagem
    // ✅ Post - Pesquisar hospedagem
 
-   app.post('/escolha-hospedagem-petsitter/servicos', (req, res) => {
+  //  app.post('/escolha-hospedagem-petsitter/servicos', (req, res) => {
+  //   const {
+  //     dataInicio,
+  //     dataFim,
+  //     servico,
+  //     estado,
+  //     cidade,
+  //     tipoPet,
+  //     quantidade
+  //   } = req.body;
+  
+  //   con.query(`
+  //     INSERT INTO agendamento 
+  //     ( Data_Inicio, Data_conclusao, Servico, Estado, Cidade, TipoPet, Quantidade) 
+  //     VALUES (?, ?, ?, ?, ?, ?, ?)`, 
+  //     [ dataInicio, dataFim, servico, estado, cidade, tipoPet, quantidade],
+  //     (error, result) => {
+  //       if (error) {
+  //         console.error(error);
+  //         return res.status(500).json({ msg: 'Erro ao registrar reserva' });
+  //       }
+  
+  //       res.status(201).json({ msg: 'Reserva criada com sucesso', idReserva: result.insertId });
+  //     });
+  // });
+
+  app.post('/escolha-hospedagem-petsitter/servicos', (req, res) => {
     const {
-      
-      dataInicio,
-      dataFim,
-      servico,
-      estado,
-      cidade,
-      tipoPet,
-      quantidade
+      Tipo_servico,
+      Preco_servico,
+      qtd_pets,
+      Porte_pet,
+      Situacao,
+      ID_Usuario // ID do cuidador
     } = req.body;
   
-    con.query(`
-      INSERT INTO agendamento 
-      ( Data_Inicio, Data_conclusao, Servico, Estado, Cidade, TipoPet, Quantidade) 
-      VALUES (?, ?, ?, ?, ?, ?, ?)`, 
-      [ dataInicio, dataFim, servico, estado, cidade, tipoPet, quantidade],
-      (error, result) => {
-        if (error) {
-          console.error(error);
-          return res.status(500).json({ msg: 'Erro ao registrar reserva' });
-        }
+    const query = `
+      INSERT INTO servicos (Tipo_servico, Preco_servico, qtd_pets, Porte_pet, Situacao, ID_Usuario)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+    const values = [Tipo_servico, Preco_servico, qtd_pets, Porte_pet, Situacao, ID_Usuario];
   
-        res.status(201).json({ msg: 'Reserva criada com sucesso', idReserva: result.insertId });
-      });
+    con.query(query, values, (error, result) => {
+      if (error) {
+        console.error(error);
+        return res.status(500).json({ msg: 'Erro ao registrar reserva' });
+      }
+  
+      res.status(201).json({ msg: 'Reserva criada com sucesso', idReserva: result.insertId });
+    });
   });
   
 
@@ -676,7 +715,7 @@ app.post("/reserva/filtro",(req,res)=>{
 	dp.Nome,dp.Sobrenome, en.Cidade,en.Estado, se.Tipo_servico, se.Preco_servico
 	FROM usuario us INNER JOIN dados_pessoais dp ON us.ID_Usuario = dp.ID_Usuario
 	INNER JOIN enderecos en ON us.ID_Usuario = en.ID_Usuario INNER JOIN agendamento ag ON 
-	us.ID_Usuario = ag.ID_Usuario INNER JOIN servicos se ON ag.ID_Servico = se.ID_Servico
+	us.ID_Usuario = ag.Cuidador INNER JOIN servicos se ON ag.ID_Servico = se.ID_Servico
 	WHERE us.Tipo_usuario = "Cuidador" OR us.Tipo_usuario = "Cuidador/Tutor" AND en.Cidade = ? 
 	AND en.Estado = ? AND se.Tipo_servico = ?`,[req.body.cidade,req.body.estado,req.body.tiposervico],(err,result)=>{
     if(err){
@@ -781,12 +820,12 @@ app.post("/reserva/filtro",(req,res)=>{
 //   });
 // });
 
-app.post('/reserva/cad-hosp/:id', (req, res) => {
-  const Tutor = req.params.id;
+app.post('/reserva/cad-hosp/', (req, res) => {
 
   const {
-    ID_Usuario,
-    Tipo_servico,
+    Cuidador,
+    Tutor,
+    ID_Servico,
     Preco_servico,
     qtd_pets,
     Porte_pet,
@@ -794,41 +833,40 @@ app.post('/reserva/cad-hosp/:id', (req, res) => {
     data_inicio,
     data_conclusao,
     ID_Pet,
-    ID_Endereco,
     Periodo_entrada,
     Periodo_saida,
     Instru_Pet,
     Itens_Pet
   } = req.body;
 
-  // Inserir serviço
-  const insertServicoQuery = `
-    INSERT INTO servicos (ID_Usuario, Tipo_servico, Preco_servico, qtd_pets, Porte_pet, Situacao)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `;
-  const servicoValues = [ID_Usuario, Tipo_servico, Preco_servico, qtd_pets, Porte_pet, Situacao];
+  // // Inserir serviço
+  // const insertServicoQuery = `
+  //   INSERT INTO servicos (Tipo_servico, Preco_servico, qtd_pets, Porte_pet, Situacao)
+  //   VALUES (?, ?, ?, ?, ?)
+  // `;
+  // const servicoValues = [Tipo_servico, Preco_servico, qtd_pets, Porte_pet, Situacao];
 
-  con.query(insertServicoQuery, servicoValues, (err, servicoResult) => {
-    if (err) {
-      console.error("Erro ao inserir serviço:", err);
-      return res.status(500).send({ error: "Erro ao cadastrar o serviço", detalhes: err.message });
-    }
+  // con.query(insertServicoQuery, servicoValues, (err, servicoResult) => {
+  //   if (err) {
+  //     console.error("Erro ao inserir serviço:", err);
+  //     return res.status(500).send({ error: "Erro ao cadastrar o serviço", detalhes: err.message });
+  //   }
 
-    const ID_Servico = servicoResult.insertId;
+  //   const ID_Servico = servicoResult.insertId;
 
     // Inserir agendamento
     const insertAgendamentoQuery = `
       INSERT INTO agendamento (
-        ID_Servico, ID_Usuario, data_inicio, data_conclusao,
-        ID_Pet, ID_Endereco, Periodo_entrada, Periodo_saida,
+        ID_Servico, Cuidador, Tutor, data_inicio, data_conclusao,
+        ID_Pet, Periodo_entrada, Periodo_saida,
         Instru_Pet, Itens_Pet
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const agendamentoValues = [
-      ID_Servico, ID_Usuario,
+      ID_Servico, Cuidador, Tutor,
       data_inicio, data_conclusao,
-      ID_Pet, ID_Endereco,
+      ID_Pet,
       Periodo_entrada, Periodo_saida,
       Instru_Pet, Itens_Pet
     ];
@@ -845,7 +883,7 @@ app.post('/reserva/cad-hosp/:id', (req, res) => {
       });
     });
   });
-});
+
 
 
 
