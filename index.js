@@ -253,7 +253,7 @@ app.post('/meu-perfil/inserir-endereco/', (req, res) => {
 
 app.put('/meu-perfil/alterar-dados-pessoais/:id', (req, res) => {
   console.log(req.body)
-  console.log(req.params.id)
+  //console.log(req.params.id)
   const id = req.params.id;
   const {
     CPF,
@@ -275,6 +275,22 @@ app.put('/meu-perfil/alterar-dados-pessoais/:id', (req, res) => {
 
   } = req.body;
 
+  console.log("================================================================================");
+
+  console.log(req.body.Tipo_servico);
+  console.log(req.body.Preco_servico);
+  console.log(req.body.Tipo_porte);
+
+
+  const queryServico = `
+  INSERT INTO servicos(Tipo_servico, Preco_servico, Porte_pet, ID_Usuario)values(?,?,?,?) `;
+  con.query(queryServico, [Tipo_servico, Preco_servico, Tipo_porte, id], (erroServico, resultadoServico) => {
+    if (erroServico) {
+      return res.status(500).send({ msg: `Erro ao atualizar serviço: ${erroServico}` });
+    }
+    console.log("Serviço atualizado com sucesso:", resultadoServico);
+  });
+
   // 1. Atualiza dados pessoais
   const queryDadosPessoais = `
     UPDATE dados_pessoais
@@ -294,16 +310,8 @@ app.put('/meu-perfil/alterar-dados-pessoais/:id', (req, res) => {
         return res.status(500).send({ msg: `Erro ao atualizar tipo de usuário: ${erroTipo}` });
       }    
     });
-    console.log(Tipo_servico, Preco_servico, Tipo_porte, id);
-      const queryServico = `
-        INSERT INTO servicos(Tipo_servico, Preco_servico, Porte_pet, ID_Usuario)values(?,?,?,?) `;
-        con.query(queryServico, [Tipo_servico, Preco_servico, Tipo_porte, id], (erroServico, resultadoServico) => {
-          if (erroServico) {
-            return res.status(500).send({ msg: `Erro ao atualizar serviço: ${erroServico}` });
-          }
-          console.log("Serviço atualizado com sucesso:", resultadoServico);
-        }
-      );
+
+
   }
   // Atualiza os dados pessoais
 
@@ -513,26 +521,30 @@ app.delete('/meu-perfil/:ID_Usuario/delete-pet/:ID_Pet', (req, res) => {
 
 // ✅ Get - Listando as configurações do usuário
 
-app.get('/meu-perfil/config/:id', (req, res) => {
-  const ID_Usuario = req.params.id;
+// app.get('/meu-perfil/config/:id', (req, res) => {
+//   const ID_Usuario = req.params.id;
 
-  con.query(`
-    SELECT * FROM usuario us
-    INNER JOIN dados_pessoais dp ON us.ID_Usuario = dp.ID_Usuario
-    WHERE us.ID_Usuario = ?
-  `, [ID_Usuario], (error, result) => {
-    if (error) {
-      return res.status(500).send({ msg: `Erro ao listar configurações: ${error}` });
-    }
-    res.status(200).json(result);
-  });
-});
+//   con.query(`
+//     SELECT * FROM usuario us
+//     INNER JOIN dados_pessoais dp ON us.ID_Usuario = dp.ID_Usuario
+//     WHERE us.ID_Usuario = ?
+//   `, [ID_Usuario], (error, result) => {
+//     if (error) {
+//       return res.status(500).send({ msg: `Erro ao listar configurações: ${error}` });
+//     }
+//     res.status(200).json(result);
+//   });
+// });
 
 
 //  PUT - Atualizar configurações do usuário
 
 app.put('/meu-perfil/config/:id', (req, res) => {
   const ID_Usuario = req.params.id;
+
+  console.log(req.body)
+
+
   const {
     Nome, Sobrenome, Celular, Email_usuario
   } = req.body;
@@ -565,6 +577,9 @@ app.put('/meu-perfil/config/:id', (req, res) => {
 // Aqui estamos atualizando a senha. 
 
 app.put('/meu-perfil/config/senha/:ID_Usuario', async (req, res) => {
+
+  console.log(req.body)
+
   const ID_Usuario = req.params.ID_Usuario;
   const { Senha_usuario } = req.body;
 
