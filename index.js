@@ -213,7 +213,7 @@ app.put('/meu-perfil/:id', (req, res) => {
 
   con.query(query, [dados, id], (error, result) => {
     if (error) {
-      return res.status(500).send({ msg: `Erro ao atualizar os dados: ${error}` });
+      return res.status(500).send({ msg: `Erro OOOOOOOOO ao atualizar os dados: ${error}` });
     }
 
     res.status(200).send({ msg: "Dados do usuário atualizados com sucesso", payload: result });
@@ -254,6 +254,34 @@ app.post('/meu-perfil/inserir-endereco/', (req, res) => {
 app.put('/meu-perfil/alterar-dados-pessoais/:id', (req, res) => {
   console.log(req.body)
   //console.log(req.params.id)
+
+  if(req.body.Tipo_usuario!="Tutor"){
+    const queryServico = `
+    INSERT INTO servicos(Tipo_servico, Preco_servico, Porte_pet, ID_Usuario)values(?,?,?,?) `;
+    con.query(queryServico, 
+      [
+        req.body.Tipo_servico, req.body.Preco_servico, req.body.Tipo_porte, req.params.id], 
+      (erroServico, resultadoServico) => {
+      if (erroServico) {
+        return res.status(500).send({ msg: `Erro ao atualizar serviço: ${erroServico}` });
+      }
+    });
+  }
+
+
+  // const queryServico = `
+  //   DELETE FROM servicos WHERE ID_Usuario=?`;
+  //   con.query(queryServico, 
+  //       req.params.id,
+  //     (erroServico, resultadoServico) => {
+  //     if (erroServico) {
+  //       return res.status(500).send({ msg: `Erro ao atualizar serviço: ${erroServico}` });
+  //     }
+  //   });
+
+
+
+
   const id = req.params.id;
   const {
     CPF,
@@ -268,11 +296,7 @@ app.put('/meu-perfil/alterar-dados-pessoais/:id', (req, res) => {
     Bairro,
     Cidade,
     Estado,
-    Tipo_usuario,
-    Tipo_servico,
-    Tipo_porte,
-    Preco_servico,
-
+    Tipo_usuario
   } = req.body;
 
   console.log("================================================================================");
@@ -282,14 +306,7 @@ app.put('/meu-perfil/alterar-dados-pessoais/:id', (req, res) => {
   console.log(req.body.Tipo_porte);
 
 
-  const queryServico = `
-  INSERT INTO servicos(Tipo_servico, Preco_servico, Porte_pet, ID_Usuario)values(?,?,?,?) `;
-  con.query(queryServico, [Tipo_servico, Preco_servico, Tipo_porte, id], (erroServico, resultadoServico) => {
-    if (erroServico) {
-      return res.status(500).send({ msg: `Erro ao atualizar serviço: ${erroServico}` });
-    }
-    console.log("Serviço atualizado com sucesso:", resultadoServico);
-  });
+  
 
   // 1. Atualiza dados pessoais
   const queryDadosPessoais = `
@@ -299,7 +316,6 @@ app.put('/meu-perfil/alterar-dados-pessoais/:id', (req, res) => {
   `;
 
   // Se o Tipo_usuario for diferente de null, atualiza também na tabela usuario
-  if (Tipo_usuario == "Cuidador" || Tipo_usuario == "Cuidador/Tutor") {
     const queryTipoUsuario = `
       UPDATE usuario
       SET Tipo_usuario = ?
@@ -312,7 +328,7 @@ app.put('/meu-perfil/alterar-dados-pessoais/:id', (req, res) => {
     });
 
 
-  }
+  
   // Atualiza os dados pessoais
 
 
