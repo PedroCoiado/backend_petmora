@@ -758,6 +758,25 @@ app.post("/reserva/filtro",(req,res)=>{
 
 
 
+// Listar cuidadores por ID
+
+app.get('/listar_cuidador/:ID_Usuario', (req, res) => {
+  con.query(`SELECT us.ID_Usuario, us.Tipo_usuario, us.Foto_usuario, dp.Nome, dp.Sobrenome, end.Estado, end.Cidade, ser.Tipo_servico, ser.Preco_servico
+from usuario us INNER JOIN dados_pessoais dp
+ON us.ID_Usuario = dp.ID_Usuario
+INNER JOIN enderecos end ON us.ID_Usuario = end.ID_Usuario
+INNER JOIN servicos ser ON ser.ID_Usuario = us.ID_Usuario 
+WHERE us.ID_Usuario = ? AND (us.Tipo_usuario = 'Cuidador' OR us.Tipo_usuario = 'Cuidador/Tutor')`, req.params.ID_Usuario, (error, result) => {
+    if (error) {
+      return res.status(500).send({ msg: `Erro ao listar cuidadores: ${error}` });
+    }    
+    
+    res.status(200).send({ msg: "Cuidadores encontrados", payload: result });
+  })
+
+})
+
+
 
 
 
