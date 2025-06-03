@@ -743,7 +743,7 @@ app.get('/listar_hosp', (req, res) => {
 // ############################# Filtro ###############################################
 app.post("/reserva/filtro",(req,res)=>{
   con.query(`	SELECT us.ID_Usuario, us.Tipo_usuario, us.Foto_usuario,
-	dp.Nome,dp.Sobrenome, en.Cidade,en.Estado, se.Tipo_servico, se.Preco_servico
+	dp.Nome,dp.Sobrenome, en.Cidade,en.Estado, se.ID_servico,se.Tipo_servico, se.Preco_servico
 	FROM usuario us INNER JOIN dados_pessoais dp ON us.ID_Usuario = dp.ID_Usuario
 	INNER JOIN enderecos en ON us.ID_Usuario = en.ID_Usuario INNER JOIN agendamento ag ON 
 	us.ID_Usuario = ag.Cuidador INNER JOIN servicos se ON ag.ID_Servico = se.ID_Servico
@@ -761,7 +761,7 @@ app.post("/reserva/filtro",(req,res)=>{
 // Listar cuidadores por ID
 
 app.get('/listar_cuidador/:ID_Usuario', (req, res) => {
-  con.query(`SELECT us.ID_Usuario, us.Tipo_usuario, us.Foto_usuario, dp.Nome, dp.Sobrenome, end.Estado, end.Cidade, ser.Tipo_servico, ser.Preco_servico
+  con.query(`SELECT us.ID_Usuario, us.Tipo_usuario, us.Foto_usuario, dp.Nome, dp.Sobrenome, end.Estado, end.Cidade, ser.ID_servico, ser.Tipo_servico, ser.Preco_servico
 from usuario us INNER JOIN dados_pessoais dp
 ON us.ID_Usuario = dp.ID_Usuario
 INNER JOIN enderecos end ON us.ID_Usuario = end.ID_Usuario
@@ -775,6 +775,24 @@ WHERE us.ID_Usuario = ? AND (us.Tipo_usuario = 'Cuidador' OR us.Tipo_usuario = '
   })
 
 })
+
+
+app.get('/listar_recibo/:ID_Usuario', (req, res) => {
+  con.query(`SELECT us.ID_Usuario, dp.Nome, dp.Sobrenome, ag.Instru_Pet, ag.Itens_Pet, ag.data_inicio, ag.data_conclusao, end.Estado, end.Cidade, end.Logradouro, end.Numero, ser.Preco_servico
+    from usuario us INNER JOIN dados_pessoais dp 
+    ON us.ID_Usuario = dp.ID_Usuario
+    INNER JOIN enderecos end ON us.ID_Usuario = end.ID_Usuario
+    INNER JOIN agendamento ag ON us.ID_Usuario = ag.Cuidador
+    INNER JOIN servicos ser ON ag.ID_Servico = ser.ID_Servico
+    WHERE us.ID_Usuario = ? AND (us.Tipo_usuario = 'Cuidador' OR us.Tipo_usuario = 'Cuidador/Tutor')`, req.params.ID_Usuario, (error, result) => {
+    if (error) {
+      return res.status(500).send({ msg: `Erro ao listar reservas: ${error}` });
+    }
+    res.status(200).send({ msg: "Reservas encontradas", payload: result });
+  })
+});
+
+
 
 
 
