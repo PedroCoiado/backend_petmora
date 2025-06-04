@@ -9,6 +9,8 @@ const cors = require('cors');
 
 const path = require('path');
 
+const multer = require('multer'); // Importar a biblioteca do multer para fazer o upload de arquivos
+
 
 //importar a biblioteca do bcrypt
 //para a criptografia de senha
@@ -48,8 +50,6 @@ app.use(express.json());
 app.use(cors());
 
 app.use(express.static('fotos'));
-
-
 
 
 
@@ -145,11 +145,11 @@ app.put('/atualizar_user/:ID_Usuario', (req, res) => {
 
     // ==========================================================================================
 
-    app.get('/fotos', (req, res) => {
+  //   app.get('/fotos', (req, res) => {
     
-      // Envia o arquivo "id1photo.png" localizado na pasta "fotos" no diretório raiz do projeto
-      res.sendFile(__dirname + "/fotos/id1photo.png");
-  });
+  //     // Envia o arquivo "id1photo.png" localizado na pasta "fotos" no diretório raiz do projeto
+  //     res.sendFile(__dirname + "/fotos/id1photo.png");
+  // });
 
 //Login
 app.post('/login', (req, res) => {
@@ -206,6 +206,7 @@ app.post('/login', (req, res) => {
 // Atualizar meu perfil
 
 app.put('/meu-perfil/:id', (req, res) => {
+  console.log(req.body)
   const id = req.params.id;
   const dados = req.body;
 
@@ -219,6 +220,7 @@ app.put('/meu-perfil/:id', (req, res) => {
     res.status(200).send({ msg: "Dados do usuário atualizados com sucesso", payload: result });
   });
 });
+
 
 app.post('/meu-perfil/inserir-endereco/', (req, res) => {
   const {
@@ -251,7 +253,27 @@ app.post('/meu-perfil/inserir-endereco/', (req, res) => {
   });
 });
 
-app.put('/meu-perfil/alterar-dados-pessoais/:id', (req, res) => {
+
+// Fazendo a atualização da foto do usuario.
+
+app.use('/fotos', express.static(path.join(__dirname, 'fotos')));
+
+// Configuração do Multer para upload de arquivos
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'fotos/'); // Onde as fotos serão salvas
+    },
+    filename: (req, file, cb) => {
+        // Gera um nome único para o arquivo, evitando sobrescrita
+        cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ storage: storage });
+
+
+
+app.put('/meu-perfil/alterar-dados-pessoais/:id', upload.single('Foto_usuario'),(req, res) => {
   console.log(req.body)
   //console.log(req.params.id)
 
@@ -311,17 +333,24 @@ app.put('/meu-perfil/alterar-dados-pessoais/:id', (req, res) => {
   // 1. Atualiza dados pessoais
   const queryDadosPessoais = `
     UPDATE dados_pessoais
-    SET CPF = ?, RG = ?, Data_Nascimento = ?, Genero = ?, Celular = ? 
+    SET CPF = ?, RG = ?, Data_Nascimento = ?, Genero = ?, Celular = ?
     WHERE ID_Usuario = ?
   `;
+// Foto de upload, para atualizar as fotos de perfil.
+
+  let foto_url = null;
+  if (req.file) {
+    foto_url = `/fotos/${req.file.filename}`; // URL pública da foto
+}
+
 
   // Se o Tipo_usuario for diferente de null, atualiza também na tabela usuario
     const queryTipoUsuario = `
       UPDATE usuario
-      SET Tipo_usuario = ?
+      SET Tipo_usuario = ?, Foto_usuario = ?
       WHERE ID_Usuario = ? 
     `;
-    con.query(queryTipoUsuario, [Tipo_usuario, id], (erroTipo, resultadoTipo) => {
+    con.query(queryTipoUsuario, [Tipo_usuario,foto_url, id], (erroTipo, resultadoTipo) => {
       if (erroTipo) {
         return res.status(500).send({ msg: `Erro ao atualizar tipo de usuário: ${erroTipo}` });
       }    
