@@ -777,19 +777,37 @@ WHERE us.ID_Usuario = ? AND (us.Tipo_usuario = 'Cuidador' OR us.Tipo_usuario = '
 })
 
 
-app.get('/listar_recibo/:ID_Usuario', (req, res) => {
-  con.query(`SELECT us.ID_Usuario, dp.Nome, dp.Sobrenome, ag.Instru_Pet, ag.Itens_Pet, ag.data_inicio, ag.data_conclusao, end.Estado, end.Cidade, end.Logradouro, end.Numero, ser.Preco_servico
-    from usuario us INNER JOIN dados_pessoais dp 
-    ON us.ID_Usuario = dp.ID_Usuario
-    INNER JOIN enderecos end ON us.ID_Usuario = end.ID_Usuario
-    INNER JOIN agendamento ag ON us.ID_Usuario = ag.Cuidador
-    INNER JOIN servicos ser ON ag.ID_Servico = ser.ID_Servico
-    WHERE us.ID_Usuario = ? AND (us.Tipo_usuario = 'Cuidador' OR us.Tipo_usuario = 'Cuidador/Tutor')`, req.params.ID_Usuario, (error, result) => {
-    if (error) {
-      return res.status(500).send({ msg: `Erro ao listar reservas: ${error}` });
+app.get("/listar_recibo/:ID_Usuario", (req, res) => {
+  con.query(
+    `SELECT us.ID_Usuario,
+            dp.Nome,
+            dp.Sobrenome,
+            ag.Instru_Pet,
+            ag.Itens_Pet,
+            ag.data_inicio,
+            ag.data_conclusao,
+            end.Estado,
+            end.Cidade,
+            end.Logradouro,
+            end.Numero,
+            ser.Preco_servico,
+            pt.Nome
+     FROM usuario us
+     INNER JOIN dados_pessoais dp ON us.ID_Usuario = dp.ID_Usuario
+     INNER JOIN enderecos end ON us.ID_Usuario = end.ID_Usuario
+     INNER JOIN agendamento ag ON us.ID_Usuario = ag.Cuidador
+     INNER JOIN servicos ser ON ag.ID_Servico = ser.ID_Servico
+     INNER JOIN pet pt ON ag.ID_Pet = pt.ID_Pet
+     WHERE us.ID_Usuario = ?
+       AND (us.Tipo_usuario = 'Cuidador' OR us.Tipo_usuario = 'Cuidador/Tutor')`,
+    req.params.ID_Usuario,
+    (error, result) => {
+      if (error) {
+        return res.status(500).send({ msg: `Erro ao listar reservas: ${error}` });
+      }
+      res.status(200).send({ msg: "Reservas encontradas", payload: result });
     }
-    res.status(200).send({ msg: "Reservas encontradas", payload: result });
-  })
+  );
 });
 
 
@@ -906,6 +924,7 @@ app.post('/reserva/cad-hosp/', (req, res) => {
     Instru_Pet,
     Itens_Pet
   } = req.body;
+  console.log("Dados recebidos para cadastrar **************** :", req.body);
 
   // // Inserir serviço
   // const insertServicoQuery = `
